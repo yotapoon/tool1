@@ -1,0 +1,56 @@
+' 列と値を指定してフィルターする関数
+Function filter_by(range_target, col, col_item) ' colはフィルター用の列，col_itemは絞り込む要素
+    col_list = range_target.Rows(1) ' 列の一覧
+    col_number = WorksheetFunction.Match(col, col_list, False) ' 絞り込む列が何番目か調べる
+    ' フィルター
+    range_target.AutoFilter col_number, col_item
+End Function
+
+' フィルターを解除
+Function unfilter(range_target)
+    If range_target.Parent.AutoFilterMode = True Then
+        range_target.AutoFilter ' オートフィルターを解除
+    End If
+End Function
+
+' コピーペースト(値のみ)
+Function copy_and_paste(path_from, sheet_from, ref_from, path_to, sheet_to, ref_to)
+    Workbooks.Open(path_to).Sheets(sheet_to).range(ref_to).CurrentRegion.Clear
+    Workbooks.Open(path_from).Sheets(sheet_from).range(ref_from).CurrentRegion.Copy
+    Workbooks.Open(path_to).Sheets(sheet_to).range(ref_to).PasteSpecial Paste:=xlPasteValues
+End Function
+
+'同業他社を選定
+Function get_comps(GICS_digits, global_or_jpn, path_from, sheet_from, path_to, range_target)
+    ' GICSフィルターの準備
+    sheet_to = "GICS" + CStr(GICS_digits) + "(" + global_or_jpn + ")"
+    col = "GICS" + CStr(GICS_digits) + "_NAME_JPN"
+    col_item = WorksheetFunction.VLookup(col, Workbooks.Open(path_to).Sheets("マスター").range("B4:C7"), 2, False)
+    
+    ' フィルター
+    Call filter_by(range_target, col, col_item) ' GICSでフィルター
+    If global_or_jpn = "国内" Then ' 国内の企業に絞る
+        Call filter_by(range_target, "COUNTRY", "日本")
+    End If
+    Call copy_and_paste(path_from, sheet_from, "B2", path_to, sheet_to, "B2") ' フィルターした結果を貼り付け
+    Call unfilter(range_target) ' フィルター解除
+    
+End Function
+
+
+Sub exe()
+    ' ファイルの設定
+    path_from = "C:\Users\yota-\Desktop\study\work\tool\フィルター\data\data.xlsx"
+    sheet_from = "data"
+    path_to = ThisWorkbook.FullName
+    ' フィルター対象のデータ範囲
+    Set range_target = Workbooks.Open(path_from).Sheets(sheet_from).range("B2").CurrentRegion
+    
+    
+    Call get_comps(2, "国内", path_from, sheet_from, path_to, range_target)
+    Call get_comps(4, "国内", path_from, sheet_from, path_to, range_target)
+    Call get_comps(6, "国内", path_from, sheet_from, path_to, range_target)
+    Call get_comps(8, "国内", path_from, sheet_from, path_to, range_target)
+    Call get_comps(2, "グローバル", path_from, sheet_from, path_to, range_target)
+    
+End Sub
